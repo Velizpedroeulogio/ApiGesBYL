@@ -218,8 +218,25 @@ def api_tabla(req: ReqTabla):
 
         elif accion == "UPD":
             sql, afectados = ejecutar_update(cur, tabla, req.set, req.where)
+            if afectados == 0:
+                cnx.rollback()
+                print(f"    >>> ERROR UPD - ninguna fila afectada")
+                return { "estado":  "ERROR",
+                         "detalle": "UPDATE no afecto ninguna fila",
+                         "accion":  accion,
+                         "tabla":   tabla,
+                         "sql":     sql, }
             cnx.commit()
             print(f"    >>> OK UPD - registros afectados: {afectados}")
+            # Verificacion post-commit: confirma que el valor quedo grabado
+            cur2 = cnx.cursor()
+            campos_set = list(req.set.keys())
+            cols_sql   = ", ".join([f'"{validar_nombre_sql(c)}"' for c in campos_set])
+            vals_where = []
+            where_sql  = armar_where(req.where, vals_where)
+            cur2.execute(f'SELECT {cols_sql} FROM "{tabla}" WHERE {where_sql}', vals_where)
+            fila = cur2.fetchone()
+            print(f"    >>> VERIFICACION post-commit: {dict(zip(campos_set, fila)) if fila else 'SIN DATOS'}")
             return { "estado":    "OK",
                      "detalle":   "Proceso correcto",
                      "accion":    accion,
