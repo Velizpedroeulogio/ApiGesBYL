@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visor SQL — PostgreSQL BYL</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d27;
+      --bg3: #22263a;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #e8eaf0;
+      --text2: #8b8fa8;
+      --text3: #555972;
+      --blue: #4f8ef7;
+      --blue-bg: rgba(79,142,247,0.12);
+      --green: #4caf7d;
+      --green-bg: rgba(76,175,125,0.12);
+      --red: #e05c5c;
+      --red-bg: rgba(224,92,92,0.12);
+      --amber: #d49a3c;
+      --amber-bg: rgba(212,154,60,0.1);
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--bg2);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-icon {
+      width: 32px; height: 32px;
+      background: var(--blue-bg);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-icon svg { width: 18px; height: 18px; stroke: var(--blue); }
+    .nav-title { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+    .nav-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .nav-badge {
+      margin-left: auto;
+      font-size: 11px; font-family: monospace;
+      padding: 3px 10px;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: 20px;
+      color: var(--text2);
+    }
+
+    /* MAIN */
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+    /* CONN BAR */
+    .conn-panel {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    .conn-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr auto;
+      gap: 14px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+    select, input[type=text] {
+      width: 100%;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    select:focus, input[type=text]:focus { border-color: var(--blue); }
+    option { background: #1a1d27; }
+
+    .status-bar {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text2);
+      font-family: monospace;
+      min-height: 20px;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text3);
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.err { background: var(--red); }
+    .dot.loading { background: var(--amber); animation: blink 0.9s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* SHORTCUTS */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip {
+      font-size: 12px;
+      font-family: 'Consolas', monospace;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--bg3);
+      border: 0.5px solid var(--border);
+      color: var(--text2);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .chip:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* EDITOR */
+    .editor-panel {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .editor-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--bg3);
+    }
+    .editor-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+    .editor-hint { margin-left: auto; font-size: 11px; color: var(--text3); }
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      background: var(--bg2);
+      border: none;
+      color: var(--text);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 16px 18px;
+      resize: vertical;
+      outline: none;
+      display: block;
+    }
+
+    /* ACTIONS */
+    .actions {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .btn-run {
+      font-size: 14px; font-weight: 500;
+      padding: 10px 24px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .btn-run:hover { opacity: 0.85; }
+    .btn-run:active { transform: scale(0.97); }
+    .btn-run:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn {
+      font-size: 13px;
+      padding: 9px 16px;
+      background: transparent;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      color: var(--text2);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn:hover { background: var(--bg3); color: var(--text); }
+    .rows-info { margin-left: auto; font-size: 13px; color: var(--text2); font-family: monospace; }
+
+    /* MESSAGES */
+    .msg-error {
+      padding: 12px 16px;
+      background: var(--red-bg);
+      border: 0.5px solid rgba(224,92,92,0.25);
+      border-radius: var(--radius);
+      color: var(--red);
+      font-size: 13px;
+      font-family: monospace;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .msg-success {
+      padding: 12px 16px;
+      background: var(--green-bg);
+      border: 0.5px solid rgba(76,175,125,0.25);
+      border-radius: var(--radius);
+      color: var(--green);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    /* TABLE */
+    .result-panel {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .result-scroll { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-family: 'Consolas', monospace; font-size: 13px; }
+    thead th {
+      background: var(--bg3);
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text2);
+      border-bottom: 0.5px solid var(--border2);
+      position: sticky; top: 0;
+      white-space: nowrap;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    tbody td {
+      padding: 8px 14px;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text);
+      max-width: 380px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--bg3); }
+    .null-val { color: var(--text3); font-style: italic; }
+    .num-val { color: #7ec8e3; }
+    .bool-val { color: var(--green); }
+
+    .empty-state {
+      padding: 48px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    @media (max-width: 640px) {
+      .conn-grid { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/>
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+    </svg>
+  </div>
+  <div>
+    <div class="nav-title">Visor SQL</div>
+    <div class="nav-sub">PostgreSQL · BYL Sistema</div>
+  </div>
+  <div class="nav-badge" id="nav-badge">sin conectar</div>
+</nav>
+
+<main>
+
+  <!-- Conexión -->
+  <div class="conn-panel">
+    <div class="conn-grid">
+      <div class="field">
+        <label>Entorno</label>
+        <select id="env-select" onchange="updateUrl()">
+          <option value="local">Local — 127.0.0.1:8560</option>
+          <option value="railway">Railway — producción</option>
+          <option value="custom">URL personalizada...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>URL del endpoint /api/query</label>
+        <input type="text" id="url-input" value="http://127.0.0.1:8560/api/query" readonly />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn" onclick="testConn()">Probar conexión</button>
+      </div>
+    </div>
+    <div class="status-bar">
+      <div class="dot" id="dot"></div>
+      <span id="conn-status">Sin probar — elegí un entorno y presioná "Probar conexión"</span>
+    </div>
+  </div>
+
+  <!-- Shortcuts -->
+  <div class="chips">
+    <span class="chip" onclick="setQ('SELECT * FROM sorteos LIMIT 50')">sorteos · limit 50</span>
+    <span class="chip" onclick="setQ('SELECT * FROM sorteos WHERE evn_num = 2115')">sorteo 2115</span>
+    <span class="chip" onclick="setQ('SELECT COUNT(*) AS total FROM sorteos')">contar sorteos</span>
+    <span class="chip" onclick="setQ(`SELECT table_name FROM information_schema.tables\nWHERE table_schema = 'public'\nORDER BY table_name`)">listar tablas</span>
+    <span class="chip" onclick="setQ(`SELECT column_name, data_type, is_nullable\nFROM information_schema.columns\nWHERE table_name = 'sorteos'\nORDER BY ordinal_position`)">columnas · sorteos</span>
+    <span class="chip" onclick="setQ('SELECT * FROM sorteos ORDER BY evn_num DESC LIMIT 10')">últimos 10</span>
+  </div>
+
+  <!-- Editor -->
+  <div class="editor-panel">
+    <div class="editor-header">
+      <span class="editor-label">Consulta SQL</span>
+      <span class="editor-hint">Ctrl+Enter para ejecutar</span>
+    </div>
+    <textarea id="sql-input" spellcheck="false"
+      onkeydown="handleKey(event)"
+      placeholder="SELECT * FROM sorteos WHERE evn_num = 2115 ...">SELECT * FROM sorteos LIMIT 20</textarea>
+  </div>
+
+  <!-- Acciones -->
+  <div class="actions">
+    <button class="btn-run" id="run-btn" onclick="runQuery()">&#9654; Ejecutar</button>
+    <button class="btn" onclick="clearAll()">Limpiar</button>
+    <button class="btn" id="copy-btn" onclick="copyCSV()" style="display:none">Copiar CSV</button>
+    <span class="rows-info" id="rows-info"></span>
+  </div>
+
+  <!-- Mensajes -->
+  <div id="error-area"></div>
+  <div id="success-area"></div>
+
+  <!-- Resultados -->
+  <div class="result-panel" id="result-panel" style="display:none">
+    <div class="result-scroll">
+      <table>
+        <thead id="t-head"></thead>
+        <tbody id="t-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="empty-state" id="empty-state" style="display:none">Sin resultados para esta consulta.</div>
+
+</main>
+
+<script>
+const URLS = {
+  local:   'http://127.0.0.1:8560/api/query',
+  railway: 'https://apigesbyl-production.up.railway.app/api/query'
+};
+let lastRows = null, lastCols = null;
+
+function updateUrl() {
+  const sel = document.getElementById('env-select').value;
+  const inp = document.getElementById('url-input');
+  if (sel === 'custom') {
+    inp.removeAttribute('readonly');
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.setAttribute('readonly', '');
+    inp.value = URLS[sel];
+  }
+  setStatus('', 'Sin probar');
+  document.getElementById('nav-badge').textContent = sel === 'local' ? 'local' : sel === 'railway' ? 'railway' : 'custom';
+}
+
+function setStatus(state, msg) {
+  const dot = document.getElementById('dot');
+  const st  = document.getElementById('conn-status');
+  dot.className = 'dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : state === 'loading' ? ' loading' : '');
+  st.textContent = msg;
+}
+
+async function testConn() {
+  setStatus('loading', 'Probando...');
+  const base = document.getElementById('url-input').value.replace('/api/query', '/');
+  try {
+    const r = await fetch(base, { method: 'GET' });
+    if (r.ok) {
+      setStatus('ok', 'Conectado — servicio activo');
+      document.getElementById('nav-badge').style.color = '#4caf7d';
+    } else {
+      setStatus('err', 'El servicio respondió con error HTTP ' + r.status);
+    }
+  } catch(e) {
+    setStatus('err', 'Sin conexión — verificá que el servicio esté corriendo en esa URL');
+  }
+}
+
+function setQ(q) { document.getElementById('sql-input').value = q; }
+
+function handleKey(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runQuery();
+  }
+}
+
+async function runQuery() {
+  const sql = document.getElementById('sql-input').value.trim();
+  if (!sql) return;
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { showError('Ingresá la URL del endpoint.'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '... Ejecutando';
+
+  document.getElementById('error-area').innerHTML = '';
+  document.getElementById('success-area').innerHTML = '';
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('rows-info').textContent = '';
+  document.getElementById('copy-btn').style.display = 'none';
+  lastRows = lastCols = null;
+
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql })
+    });
+    const json = await r.json();
+    if (!r.ok) {
+      showError(json.detail || json.error || ('Error HTTP ' + r.status));
+      return;
+    }
+    handleResult(json);
+  } catch(e) {
+    showError('Error de red: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Ejecutar';
+  }
+}
+
+function handleResult(json) {
+  if (json.rows !== undefined) {
+    const cols = json.columns || (json.rows.length ? Object.keys(json.rows[0]) : []);
+    const rows = json.rows;
+    lastCols = cols; lastRows = rows;
+    if (!rows.length) {
+      document.getElementById('empty-state').style.display = 'block';
+      document.getElementById('rows-info').textContent = '0 filas';
+      return;
+    }
+    renderTable(cols, rows);
+    document.getElementById('rows-info').textContent = rows.length + (rows.length === 1 ? ' fila' : ' filas');
+    document.getElementById('copy-btn').style.display = '';
+  } else if (json.affected !== undefined) {
+    document.getElementById('success-area').innerHTML =
+      '<div class="msg-success">&#10003; Filas afectadas: <strong>' + json.affected + '</strong>' +
+      (json.message ? ' — ' + json.message : '') + '</div>';
+    document.getElementById('rows-info').textContent = json.affected + ' afectadas';
+  } else if (json.message) {
+    document.getElementById('success-area').innerHTML =
+      '<div class="msg-success">&#10003; ' + esc(json.message) + '</div>';
+  }
+}
+
+function renderTable(cols, rows) {
+  document.getElementById('t-head').innerHTML =
+    '<tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';
+  document.getElementById('t-body').innerHTML = rows.map(row =>
+    '<tr>' + cols.map(c => {
+      const v = row[c];
+      if (v === null || v === undefined) return '<td><span class="null-val">null</span></td>';
+      if (typeof v === 'number') return '<td class="num-val">' + v + '</td>';
+      if (typeof v === 'boolean') return '<td class="bool-val">' + v + '</td>';
+      const s = String(v);
+      return '<td title="' + esc(s) + '">' + esc(s) + '</td>';
+    }).join('') + '</tr>'
+  ).join('');
+  document.getElementById('result-panel').style.display = '';
+}
+
+function showError(msg) {
+  document.getElementById('error-area').innerHTML =
+    '<div class="msg-error">&#9888; ' + esc(msg) + '</div>';
+}
+
+function clearAll() {
+  document.getElementById('sql-input').value = '';
+  document.getElementById('error-area').innerHTML = '';
+  document.getElementById('success-area').innerHTML = '';
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('rows-info').textContent = '';
+  document.getElementById('copy-btn').style.display = 'none';
+  lastRows = lastCols = null;
+}
+
+function copyCSV() {
+  if (!lastRows || !lastCols) return;
+  const lines = [lastCols.join('\t'),
+    ...lastRows.map(r => lastCols.map(c => r[c] ?? '').join('\t'))];
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const b = document.getElementById('copy-btn');
+    b.textContent = '✓ Copiado!';
+    setTimeout(() => b.textContent = 'Copiar CSV', 2000);
+  });
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
