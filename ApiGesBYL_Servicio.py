@@ -45,6 +45,12 @@ ACCIONES_VALIDAS = {"INS", "UPD", "DLT", "SEL"}
 
 app = FastAPI(title="API Gestion BYL")
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware( CORSMiddleware,
+                    allow_origins=["*"],
+                    allow_methods=["*"],
+                    allow_headers=["*"], )
 
 class ReqTabla(BaseModel):
     tabla:  str
@@ -366,7 +372,7 @@ async def ejecutar_query(req: QueryRequest):
             conn.close()
 
 
-from fastapi.responses import FileResponse  
+from fastapi.responses import FileResponse
 
 @app.get("/visor")
 async def visor():
