@@ -33,7 +33,7 @@ import json
 import re
 
 # --- Conexion PostgreSQL Railway ---
-DATABASE_URL = "postgresql://postgres:EtSkpAxeGRBkLkdsKiQXrMIPJnuuKjlr@tramway.proxy.rlwy.net:56346/railway"
+DATABASE_URL = "postgresql://postgres:ASUxkRzTtTGBQNkVbPNTLxCOlFWKxaeO@shuttle.proxy.rlwy.net:12906/railway"
 
 CLAVE_CRC = "CLAVE_SECRETA_ABG_2026"
 
