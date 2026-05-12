@@ -95,13 +95,22 @@ def validar_crc(req):
     if str(req.crc or "").lower() != crc_calc.lower():
         raise ValueError("CRC invalido")
 
+_OPERADORES_SUFIJO = {"__GT": ">", "__GTE": ">=", "__LT": "<", "__LTE": "<="}
+
 def armar_where(where_data, valores):
     if not where_data:
         raise ValueError("WHERE obligatorio")
     partes = []
     for campo, valor in where_data.items():
-        campo_sql = validar_nombre_sql(campo)
-        partes.append(f'"{campo_sql}" = %s')
+        campo_upper = str(campo or "").strip().upper()
+        operador = "="
+        for sufijo, op in _OPERADORES_SUFIJO.items():
+            if campo_upper.endswith(sufijo):
+                campo_upper = campo_upper[: -len(sufijo)]
+                operador = op
+                break
+        campo_sql = validar_nombre_sql(campo_upper)
+        partes.append(f'"{campo_sql}" {operador} %s')
         valores.append(valor)
     return " AND ".join(partes)
 
