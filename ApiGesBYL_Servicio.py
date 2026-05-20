@@ -23,19 +23,22 @@
 #                 Se elimino el cursor anonimo + commit() que causaba problemas.
 #
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
-import psycopg2
-import psycopg2.extras
+import os
 import hashlib
 import json
 import re
 
-# --- Conexion PostgreSQL Railway ---
-DATABASE_URL = "postgresql://postgres:ASUxkRzTtTGBQNkVbPNTLxCOlFWKxaeO@shuttle.proxy.rlwy.net:12906/railway"
+import psycopg2
+import psycopg2.extras
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
 
-CLAVE_CRC = "CLAVE_SECRETA_ABG_2026"
+load_dotenv()
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+CLAVE_CRC    = os.environ.get("CLAVE_CRC", "CLAVE_SECRETA_ABG_2026")
 
 TABLAS_PERMITIDAS = { "SOC_DEF",      "SUSCRIPTORES",
                       "INF_URL",      "PUB_DEF",
