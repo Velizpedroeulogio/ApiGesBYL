@@ -37,7 +37,8 @@ from typing import Dict, Any, Optional
 
 load_dotenv()
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+DATABASE_URL = (os.environ.get("DATABASE_URL") or
+                "postgresql://postgres:ASUxkRzTtTGBQNkVbPNTLxCOlFWKxaeO@shuttle.proxy.rlwy.net:12906/railway")
 CLAVE_CRC    = os.environ.get("CLAVE_CRC", "CLAVE_SECRETA_ABG_2026")
 
 TABLAS_PERMITIDAS = { "SOC_DEF",      "SUSCRIPTORES",
