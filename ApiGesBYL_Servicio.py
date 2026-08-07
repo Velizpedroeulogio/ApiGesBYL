@@ -40,7 +40,7 @@ CLAVE_CRC = "CLAVE_SECRETA_ABG_2026"
 TABLAS_PERMITIDAS = { "SOC_DEF",      "SUSCRIPTORES",
                       "INF_URL",      "PUB_DEF",
                       "EVNC_CAR",     "SORTEOS",
-                      "GANADORES",                      }
+                      "GANADORES",    "PVT_SORT",       }
 
 ACCIONES_VALIDAS = {"INS", "UPD", "DLT", "SEL"}
 
