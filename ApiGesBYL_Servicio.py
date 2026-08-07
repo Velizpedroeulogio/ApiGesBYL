@@ -44,7 +44,8 @@ CLAVE_CRC    = os.environ.get("CLAVE_CRC", "CLAVE_SECRETA_ABG_2026")
 TABLAS_PERMITIDAS = { "SOC_DEF",      "SUSCRIPTORES",
                       "INF_URL",      "PUB_DEF",
                       "EVNC_CAR",     "SORTEOS",
-                      "GANADORES",    "PVT_SORT",       }
+                      "GANADORES",    "PVT_SORT",
+                      "EVN_DEF",                        }
 
 ACCIONES_VALIDAS = {"INS", "UPD", "DLT", "SEL"}
 
